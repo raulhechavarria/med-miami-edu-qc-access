@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const path = require('path');
 const { createStore } = require('./store');
 
+const DOWNLOAD_TTL_MS = 15 * 60 * 1000;
+
 const app = express();
 app.use(express.json());
 
@@ -21,6 +23,13 @@ app.get('/getsamples', (req, res) => {
      if (!sample) return res.status(404).json({ error: 'samples empty' });
   return res.json(sample);
 });
+
+app.get('/getAccessGrants', (req, res) => {
+     const accessGrants = store.getAccessGrants();
+     if (!accessGrants) return res.status(404).json({ error: 'access grants empty' });
+  return res.json(accessGrants);
+});
+
 
 
 // 1. Register a sample
@@ -74,7 +83,7 @@ app.post('/samples/access/:sampleId', (req, res) => {
     return res.json({ id: result.file.id, qcStatus: result.file.qcStatus });
   });
 // 4. A download-request
-  app.post('/download-request', (req, res) => {
+  app.get('/download-request', (req, res) => {
     const { userId, fileId } = req.body || {};
     if (!userId || !fileId) {
       return res.status(400).json({ error: 'userId and fileId are required' });
@@ -109,4 +118,12 @@ function serializeSample(sample, store) {
   };
 }
 
+function generateFakeDownloadUrl(file) {
+  const token = crypto.randomBytes(16).toString('hex');
+  const expiresAt = new Date(Date.now() + DOWNLOAD_TTL_MS).toISOString();
+  return {
+    url: `https://downloads.example.internal/${file.sampleId}/${file.id}?token=${token}`,
+    expiresAt,
+  };
+}
 module.exports = app;

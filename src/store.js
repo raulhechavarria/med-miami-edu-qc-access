@@ -55,7 +55,7 @@ function createStore(dbPath = ':memory:') {
     getSample: db.prepare('SELECT id, owner FROM samples WHERE id = ?'),
     getSamples: db.prepare('SELECT id, owner FROM samples'),
     getFile: db.prepare(
-      "SELECT id, sample_id AS sampleId, filename, qc_status AS qcStatus FROM files WHERE id = ? and qc_status = 'passed'",
+      "SELECT id, sample_id AS sampleId, filename, qc_status AS qcStatus FROM files WHERE id = ?" //and qc_status = 'passed'",
     ),
     listFilesForSample: db.prepare(
       'SELECT id, sample_id AS sampleId, filename, qc_status AS qcStatus FROM files WHERE sample_id = ?',
@@ -65,6 +65,9 @@ function createStore(dbPath = ':memory:') {
     ),
     getAccessGrant: db.prepare(
       'SELECT 1 FROM access_grants WHERE sample_id = ? AND user_id = ? LIMIT 1',
+    ),
+    getAccessGrants: db.prepare(
+      'SELECT * FROM access_grants',
     ),
     updateFileQC: db.prepare(
       "UPDATE files SET qc_status = ? WHERE id = ? AND qc_status = 'pending'",
@@ -119,7 +122,10 @@ function createStore(dbPath = ':memory:') {
     return Boolean(stmts.getAccessGrant.get(sampleId, userId));
   }
 
-  
+  function getAccessGrants() {
+    return stmts.getAccessGrants.all() || null;
+  }
+
   function updateFileQC(fileId, status) {
     if (!QC_STATUSES.includes(status) || status === 'pending') {
       return { ok: false, reason: 'invalid_status' };
@@ -146,6 +152,7 @@ function createStore(dbPath = ':memory:') {
     getFile,
     listFilesForSample,
     grantAccess,
+    getAccessGrants,
     hasAccess,
     updateFileQC,
     close,
